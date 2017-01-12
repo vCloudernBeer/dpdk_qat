@@ -62,7 +62,7 @@ endif
 APP = dpdk_qat
 
 # all source are stored in SRCS-y
-SRCS-y := main.c crypto.c
+SRCS-y := main.c crypto.c comp.c
 
 CFLAGS += -O3
 CFLAGS += $(WERROR_FLAGS)

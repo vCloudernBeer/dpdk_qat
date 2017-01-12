@@ -81,6 +81,7 @@
 #define ACTION_ENCRYPT 1
 #define ACTION_DECRYPT 2
 
+extern void poc_compress(void);
 /*
  * Configurable number of RX/TX ring descriptors
  */
@@ -95,6 +96,7 @@ static struct ether_addr ports_eth_addr[RTE_MAX_ETHPORTS];
 /* mask of enabled ports */
 static unsigned enabled_port_mask = 0;
 static int promiscuous_on = 1; /**< Ports set in promiscuous mode on by default. */
+static int run_compress = 0; /*By default this program runs the crypto operation.*/
 
 /* list of enabled ports */
 static uint32_t dst_ports[RTE_MAX_ETHPORTS];
@@ -566,6 +568,10 @@ parse_args(int argc, char **argv)
 				printf("Promiscuous mode disabled\n");
 				promiscuous_on = 0;
 			}
+			if (strcmp(lgopts[option_index].name, "run-compress") == 0) {
+				printf("Promiscuous mode disabled\n");
+				run_compress = 1;
+			}
 			break;
 		default:
 			print_usage(prgname);
@@ -649,31 +655,37 @@ main(int argc, char **argv)
 	if (ret < 0)
 		return -1;
 
-	if (check_lcore_params() < 0)
+	if (run_compress == 1)
+        {
+                poc_compression();
+        }
+        else
+        {
+	  if (check_lcore_params() < 0)
 		rte_panic("check_lcore_params failed\n");
 
-	ret = init_lcore_rx_queues();
-	if (ret < 0)
+	  ret = init_lcore_rx_queues();
+	  if (ret < 0)
 		return -1;
 
-	ret = init_mem();
-	if (ret < 0)
+	  ret = init_mem();
+	  if (ret < 0)
 		return -1;
 
-	nb_ports = rte_eth_dev_count();
+	  nb_ports = rte_eth_dev_count();
 
-	if (check_port_config(nb_ports) < 0)
+	  if (check_port_config(nb_ports) < 0)
 		rte_panic("check_port_config failed\n");
 
-        /* reset dst_ports */
-        for (portid = 0; portid < RTE_MAX_ETHPORTS; portid++)
+          /* reset dst_ports */
+          for (portid = 0; portid < RTE_MAX_ETHPORTS; portid++)
                 dst_ports[portid] = 0;
-        last_port = 0;
+          last_port = 0;
 
-        /*
-         * Each logical core is assigned a dedicated TX queue on each port.
-         */
-        for (portid = 0; portid < nb_ports; portid++) {
+          /*
+           * Each logical core is assigned a dedicated TX queue on each port.
+           */
+          for (portid = 0; portid < nb_ports; portid++) {
                 /* skip ports that are not enabled */
                 if ((enabled_port_mask & (1 << portid)) == 0)
                         continue;
@@ -686,14 +698,14 @@ main(int argc, char **argv)
                         last_port = portid;
 
                 nb_ports_in_mask++;
-        }
-        if (nb_ports_in_mask % 2) {
+          }
+          if (nb_ports_in_mask % 2) {
                 printf("Notice: odd number of ports in portmask.\n");
                 dst_ports[last_port] = last_port;
-        }
+          }
 
-	/* initialize all ports */
-	for (portid = 0; portid < nb_ports; portid++) {
+	  /* initialize all ports */
+	  for (portid = 0; portid < nb_ports; portid++) {
 		/* skip ports that are not enabled */
 		if ((enabled_port_mask & (1 << portid)) == 0) {
 			printf("\nSkipping disabled port %d\n", portid);
@@ -744,9 +756,9 @@ main(int argc, char **argv)
 			queueid++;
 		}
 		printf("\n");
-	}
+	  }
 
-	RTE_LCORE_FOREACH(lcoreid) {
+	  RTE_LCORE_FOREACH(lcoreid) {
 		qconf = &lcore_conf[lcoreid];
 		printf("\nInitializing rx queues on lcore %u ... ", lcoreid );
 		fflush(stdout);
@@ -766,12 +778,12 @@ main(int argc, char **argv)
 				rte_panic("rte_eth_rx_queue_setup: err=%d,"
 						"port=%d\n", ret, portid);
 		}
-	}
+	  }
 
-	printf("\n");
+	  printf("\n");
 
-	/* start ports */
-	for (portid = 0; portid < nb_ports; portid++) {
+	  /* start ports */
+	  for (portid = 0; portid < nb_ports; portid++) {
 		if ((enabled_port_mask & (1 << portid)) == 0)
 			continue;
 		/* Start device */
@@ -799,23 +811,24 @@ main(int argc, char **argv)
 		 */
 		if (promiscuous_on)
 			rte_eth_promiscuous_enable(portid);
-	}
-	printf("Crypto: Initializing Crypto...\n");
-	if (crypto_init() != 0)
+	  }
+	  printf("Crypto: Initializing Crypto...\n");
+	  if (crypto_init() != 0)
 		return -1;
 
-	RTE_LCORE_FOREACH(lcoreid) {
+	  RTE_LCORE_FOREACH(lcoreid) {
 		if (per_core_crypto_init(lcoreid) != 0) {
 	        printf("Crypto: Cannot init lcore crypto on lcore %u\n", (unsigned)lcoreid);
 			return -1;
 		}
-	}
-	printf("Crypto: Initialization complete\n");
-	/* launch per-lcore init on every lcore */
-	rte_eal_mp_remote_launch(main_loop, NULL, CALL_MASTER);
-	RTE_LCORE_FOREACH_SLAVE(lcoreid) {
+	  }
+	  printf("Crypto: Initialization complete\n");
+	  /* launch per-lcore init on every lcore */
+	  rte_eal_mp_remote_launch(main_loop, NULL, CALL_MASTER);
+	  RTE_LCORE_FOREACH_SLAVE(lcoreid) {
 		if (rte_eal_wait_lcore(lcoreid) < 0)
 			return -1;
+	  }
 	}
 
 	return 0;

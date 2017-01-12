@@ -1,13 +1,13 @@
 # dpdk_qat
 A clone of the dpdk_qat directory from the DPDK tree with modification to support hardware assisted compression operations
 
-This is a clown of the dpdk_qat directory of the DPDK tree rev 16.07.
+This is a clone of the dpdk_qat directory of the DPDK tree rev 16.07.
 
 In the DPDK source tree, this directory is the sample code for using Intel 
 QuickAssist technology for hardware assisted cryptographic operations.
 
 Modification is made in this directory, to have a prove of concept to use the
-Intel QuickAssist hardware to perform compression and decompress operations.
+Intel QuickAssist hardware to perform compression and decompression operations.
 
 As a dependency, the Intel QuickAssist source code is needed as the functions
 in crypto.c and comp.c will reference /call API functions in the Intel
@@ -53,9 +53,9 @@ now
 This proof of concept in comp.c is work in progress and since I do not have
 the necessary hardware (QAT card), this code is NOT tested.  The code is to
 read in a file called 'uncompressedFile' and call the Intel QuickAssist API 
-cpaDcCompressData() for the compression operation and then write the compress 
-contect into a new file called 'compressedFile'.  Later we can add in the 
-decompress operation and write the decompressed content into a file called 
+cpaDcCompressData() for the compression operation and then write the
+compressed contect into a new file called 'compressedFile'.  Later we can add in the 
+decompression operations and write the decompressed content into a file called 
 'newUncompressedFile'. 
 
 
